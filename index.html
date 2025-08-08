@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.7">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!doctype html&gt;</p>
+<p class="p1">&lt;html lang="en"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="utf-8" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width,initial-scale=1" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;Universum — EVP Collector&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>:root{</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--brand:#EA5A00;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--bg:#050816;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--accent:#7be3ff;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--danger:#ff3b3b;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--power:#ffd700;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--muted:#9bb0c8;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:linear-gradient(180deg,var(--bg),#07102b);color:white;overflow:hidden}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#gameArea{position:fixed;inset:0}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>canvas{display:block;width:100%;height:100%}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#hud{position:absolute;left:12px;top:12px;background:rgba(0,0,0,0.25);padding:10px;border-radius:10px;backdrop-filter:blur(4px);z-index:40}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#toast{position:absolute;left:50%;top:20px;transform:translateX(-50%);background:rgba(0,0,0,0.75);padding:12px 16px;border-radius:10px;font-weight:700;display:none;z-index:45;max-width:760px;text-align:center}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btns{position:absolute;right:12px;top:12px;display:flex;gap:8px;z-index:40}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>button{background:var(--brand);border:none;color:white;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div id="gameArea"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;canvas id="gameCanvas"&gt;&lt;/canvas&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="hud"&gt;Score: &lt;span id="score"&gt;0&lt;/span&gt; | High: &lt;span id="highscore"&gt;0&lt;/span&gt; | Speed: &lt;span id="speedDisplay"&gt;1.00x&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="toast"&gt;Press SPACE or click to start — Use Arrow keys / WASD to move. Avoid PR disasters and scandals. Collect EVP tokens and grab High Market Cap for a boost!&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="btns"&gt;&lt;button id="retry"&gt;Retry&lt;/button&gt;&lt;button id="mute"&gt;🔊&lt;/button&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;script&gt;</p>
+<p class="p1">// ---------- Colors (use JS constants for canvas drawing — canvas doesn't accept CSS var() for fillStyle reliably) ----------</p>
+<p class="p1">const BRAND = '#EA5A00';</p>
+<p class="p1">const ACCENT = '#7be3ff';</p>
+<p class="p1">const DANGER = '#ff3b3b';</p>
+<p class="p1">const POWER = '#ffd700';</p>
+<p class="p1">const BG = '#050816';</p>
+<p class="p1">const WINDOW_DARK = '#062b36';</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Canvas setup ----------</p>
+<p class="p1">const canvas = document.getElementById('gameCanvas');</p>
+<p class="p1">const ctx = canvas.getContext('2d');</p>
+<p class="p1">let DPR = Math.max(1, window.devicePixelRatio || 1);</p>
+<p class="p1">let W = 0, H = 0;</p>
+<p class="p1">function resize(){</p>
+<p class="p1"><span class="Apple-converted-space">  </span>W = window.innerWidth; H = window.innerHeight;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>canvas.style.width = W + 'px'; canvas.style.height = H + 'px';</p>
+<p class="p1"><span class="Apple-converted-space">  </span>canvas.width = Math.floor(W * DPR); canvas.height = Math.floor(H * DPR);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.setTransform(DPR, 0, 0, DPR, 0, 0);</p>
+<p class="p1">}</p>
+<p class="p1">window.addEventListener('resize', resize); resize();</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Game state ----------</p>
+<p class="p1">let score = 0;</p>
+<p class="p1">let highscore = Number(localStorage.getItem('universum_high') || 0);</p>
+<p class="p1">document.getElementById('highscore').innerText = highscore;</p>
+<p class="p1">let gameState = 'start'; // 'start' | 'playing' | 'dead'</p>
+<p class="p1">let keys = {};</p>
+<p class="p2"><br></p>
+<p class="p1">// player</p>
+<p class="p1">let player = { x: W/2, y: H*0.6, vx:0, vy:0, size:32, accel:900, maxSpeed:520, boost:1, boostTimer:0 };</p>
+<p class="p2"><br></p>
+<p class="p1">// entities</p>
+<p class="p1">let tokens = []; // EVP collectors</p>
+<p class="p1">let obstacles = []; // PR disasters &amp; scandals</p>
+<p class="p1">let powerups = []; // High Market Cap</p>
+<p class="p2"><br></p>
+<p class="p1">// spawn timers (seconds)</p>
+<p class="p1">let spawnTokenTimer = 0.6;</p>
+<p class="p1">let spawnObstacleTimer = 2.2;</p>
+<p class="p1">let spawnPowerupTimer = 10.0;</p>
+<p class="p2"><br></p>
+<p class="p1">// Difficulty scaling (gentle)</p>
+<p class="p1">function difficulty(){ return 1 + Math.min(10, score * 0.06); }</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Input ----------</p>
+<p class="p1">window.addEventListener('keydown', e =&gt; { keys[e.key.toLowerCase()] = true; if ((e.key === ' ' || e.key === 'Spacebar') &amp;&amp; gameState !== 'playing') startGame(); });</p>
+<p class="p1">window.addEventListener('keyup', e =&gt; { keys[e.key.toLowerCase()] = false; });</p>
+<p class="p1">canvas.addEventListener('mousedown', () =&gt; { if (gameState !== 'playing') startGame(); });</p>
+<p class="p2"><br></p>
+<p class="p1">// HUD elements</p>
+<p class="p1">const scoreEl = document.getElementById('score');</p>
+<p class="p1">const speedDisplayEl = document.getElementById('speedDisplay');</p>
+<p class="p2"><br></p>
+<p class="p1">// Buttons</p>
+<p class="p1">document.getElementById('retry').addEventListener('click', () =&gt; startGame());</p>
+<p class="p1">let muted = false; document.getElementById('mute').addEventListener('click', ()=&gt;{ muted = !muted; document.getElementById('mute').innerText = muted? '🔇':'🔊'; });</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Audio (simple beeps) ----------</p>
+<p class="p1">const AudioCtx = window.AudioContext || window.webkitAudioContext; let audioCtx;</p>
+<p class="p1">function ensureAudio(){ if(!audioCtx) audioCtx = new AudioCtx(); }</p>
+<p class="p1">function playBeep(kind='tick'){</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(muted) return; try{ ensureAudio(); const t = audioCtx.currentTime;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(kind==='tick'){ const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='square'; o.frequency.setValueAtTime(700,t); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.05,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.14);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>} else if(kind==='collect'){ const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), g=audioCtx.createGain(); o1.type='sine'; o2.type='sine'; o1.frequency.setValueAtTime(520,t); o2.frequency.setValueAtTime(720,t); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.12,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.36); o1.connect(g); o2.connect(g); g.connect(audioCtx.destination); o1.start(t); o2.start(t); o1.stop(t+0.36); o2.stop(t+0.36);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>} else if(kind==='power'){ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(220,t); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.16,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+0.9); o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.9); }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}catch(e){}</p>
+<p class="p1">}</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Helpers &amp; spawners ----------</p>
+<p class="p1">function rand(min,max){ return min + Math.ra ndom()*(max-min); }</p>
+<p class="p1">function spawnToken(){ const size = 16 + Math.random()*8; const vx = rand(-10,10); const vy = rand(30,60); tokens.push({ x: rand(40, W-40), y: -size, vx, vy, size }); }</p>
+<p class="p1">function spawnObstacle(){ const size = 28 + Math.random()*24; const label = Math.random()&lt;0.5 ? 'PR disaster' : 'Scandal'; const vy = rand(30,55); obstacles.push({ x: rand(60, W-60), y: -size, vy, size, label }); }</p>
+<p class="p1">function spawnPowerup(){ const size = 24; const vy = rand(28,45); powerups.push({ x: rand(80, W-80), y: -size, vy, size, label: 'High Market Cap' }); }</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Collisions ----------</p>
+<p class="p1">function circleCollide(a,b){ const dx = a.x - b.x, dy = a.y - b.y; return (dx*dx + dy*dy) &lt; ((a.size + b.size) * (a.size + b.size)); }</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Drawing helpers ----------</p>
+<p class="p1">function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }</p>
+<p class="p2"><br></p>
+<p class="p1">function drawRocket(x,y,size,angle=0){ ctx.save(); ctx.translate(x,y); ctx.rotate(angle);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// body (brand color)</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle = BRAND; ctx.beginPath(); ctx.moveTo(0,-size*0.9); ctx.quadraticCurveTo(size*0.6,-size*0.2,0,size*1.05); ctx.quadraticCurveTo(-size*0.6,-size*0.2,0,-size*0.9); ctx.fill();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// window</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle = WINDOW_DARK; ctx.beginPath(); ctx.arc(0,-size*0.22,size*0.34,0,Math.PI*2); ctx.fill();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// fins</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle = '#ffd8c9'; ctx.beginPath(); ctx.moveTo(-size*0.42,size*0.08); ctx.lineTo(-size*1.0,size*0.5); ctx.lineTo(-size*0.18,size*0.72); ctx.closePath(); ctx.fill();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.beginPath(); ctx.moveTo(size*0.42,size*0.08); ctx.lineTo(size*1.0,size*0.5); ctx.lineTo(size*0.18,size*0.72); ctx.closePath(); ctx.fill();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// flame</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle = 'rgba(255,184,107,0.95)'; ctx.beginPath(); ctx.ellipse(0,size*0.9,size*0.3,size*0.44,0,0,Math.PI*2); ctx.fill();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.restore(); }</p>
+<p class="p2"><br></p>
+<p class="p1">function drawToken(t){ // glow + EVP</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const g = ctx.createRadialGradient(t.x, t.y, t.size*0.15, t.x, t.y, t.size*1.8);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.16, 'rgba(255,240,200,0.95)'); g.addColorStop(1, 'rgba(234,90,0,0.06)');</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle = g; ctx.beginPath(); ctx.arc(t.x, t.y, t.size, 0, Math.PI*2); ctx.fill();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle = WINDOW_DARK; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('EVP', t.x, t.y);</p>
+<p class="p1">}</p>
+<p class="p2"><br></p>
+<p class="p1">function drawObstacle(o){ const w = Math.max(86, o.size*2.4); const h = Math.max(32, o.size*0.9); const x = o.x - w/2, y = o.y - h/2, r = 10; ctx.fillStyle = DANGER; roundRect(ctx,x,y,w,h,r); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.label, o.x, o.y); }</p>
+<p class="p2"><br></p>
+<p class="p1">function drawPowerup(p){ ctx.beginPath(); ctx.fillStyle = POWER; ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = WINDOW_DARK; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('High', p.x, p.y - 6); ctx.fillText('Market Cap', p.x, p.y + 8); }</p>
+<p class="p2"><br></p>
+<p class="p1">function drawBackground(ts){ // soft gradient and some parallax stars</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const grad = ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0, '#061026'); grad.addColorStop(1, '#081633'); ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const layers = 3; for(let i=0;i&lt;layers;i++){ const count = 18 + i*18; for(let j=0;j&lt;count;j++){ const x = ( (j*37 + Math.floor(ts / (1000 + i*380) )* (i+1)*17) % W ); const y = ( (j*23 + i*41) % H ); const r = 0.35 + i*0.35; ctx.globalAlpha = 0.9 - i*0.25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); } } ctx.globalAlpha = 1; }</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Game logic ----------</p>
+<p class="p1">let lastTime = performance.now();</p>
+<p class="p2"><br></p>
+<p class="p1">function startGame(){ score = 0; updateHUD(); gameState = 'playing'; player.x = W/2; player.y = H*0.6; player.vx = 0; player.vy = 0; player.boost = 1; player.boostTimer = 0; tokens = []; obstacles = []; powerups = []; spawnTokenTimer = 0.8; spawnObstacleTimer = 2.2; spawnPowerupTimer = 10.0; document.getElementById('toast').style.display = 'none'; playBeep('power'); // seed a few gently</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(let i=0;i&lt;4;i++) spawnToken(); }</p>
+<p class="p2"><br></p>
+<p class="p1">function endGame(){ if(gameState === 'dead') return; gameState = 'dead'; if(score &gt; highscore){ highscore = score; localStorage.setItem('universum_high', highscore); document.getElementById('highscore').innerText = highscore; } const t = document.getElementById('toast'); t.innerText = 'Game Over — Score: ' + score + ' — Press Space or Click to try again'; t.style.display = 'block'; playBeep('tick'); }</p>
+<p class="p2"><br></p>
+<p class="p1">function updateHUD(){ scoreEl.innerText = score; speedDisplayEl.innerText = (1 + score*0.04 + (player.boost&gt;1?player.boost-1:0)).toFixed(2) + 'x'; }</p>
+<p class="p2"><br></p>
+<p class="p1">function update(dt){ if(gameState !== 'playing') return; const diff = difficulty();</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// input</p>
+<p class="p1"><span class="Apple-converted-space">  </span>let ax = 0, ay = 0; const thrust = player.accel * (player.boost || 1);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(keys['arrowleft'] || keys['a']) ax -= thrust; if(keys['arrowright'] || keys['d']) ax += thrust; if(keys['arrowup'] || keys['w']) ay -= thrust; if(keys['arrowdown'] || keys['s']) ay += thrust;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// apply</p>
+<p class="p1"><span class="Apple-converted-space">  </span>player.vx += ax * dt; player.vy += ay * dt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// clamp speed</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const maxSpeed = player.maxSpeed * Math.min(2.6, 1 + diff*0.06);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const sp = Math.hypot(player.vx, player.vy);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(sp &gt; maxSpeed){ player.vx = player.vx / sp * maxSpeed; player.vy = player.vy / sp * maxSpeed; }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// damping</p>
+<p class="p1"><span class="Apple-converted-space">  </span>player.vx *= Math.max(0, 1 - 5 * dt); player.vy *= Math.max(0, 1 - 5 * dt);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>player.x += player.vx * dt; player.y += player.vy * dt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// bounds</p>
+<p class="p1"><span class="Apple-converted-space">  </span>player.x = Math.max(player.size, Math.min(W - player.size, player.x)); player.y = Math.max(player.size, Math.min(H - player.size, player.y));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// boost decay</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(player.boostTimer &gt; 0){ player.boostTimer -= dt; if(player.boostTimer &lt;= 0) player.boost = 1; }</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// spawn timers (slower, friendlier pace)</p>
+<p class="p1"><span class="Apple-converted-space">  </span>spawnTokenTimer -= dt; spawnObstacleTimer -= dt; spawnPowerupTimer -= dt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const tokenBase = Math.max(0.9, 1.4 - diff*0.03);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const obstacleBase = Math.max(1.6, 2.6 - diff*0.04);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const powerupBase = Math.max(6.5, 10 - diff*0.2);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(spawnTokenTimer &lt;= 0){ spawnToken(); spawnTokenTimer = tokenBase * (0.9 + Math.random()*0.6); }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(spawnObstacleTimer &lt;= 0){ spawnObstacle(); spawnObstacleTimer = obstacleBase * (0.9 + Math.random()*0.6); }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>if(spawnPowerupTimer &lt;= 0){ spawnPowerup(); spawnPowerupTimer = powerupBase * (0.6 + Math.random()*0.8); }</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// update tokens</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(let i = tokens.length - 1; i &gt;= 0; i--){ const t = tokens[i]; t.y += t.vy * dt; t.x += (t.vx || 0) * dt; if(circleCollide(player, t)){ tokens.splice(i,1); const gained = 1 + Math.floor(diff*0.12); score += gained; player.boost = Math.min(1.25, player.boost + 0.035); updateHUD(); playBeep('collect'); } else if(t.y - t.size &gt; H) tokens.splice(i,1); }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// update obstacles</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(let i = obstacles.length - 1; i &gt;= 0; i--){ const o = obstacles[i]; o.y += o.vy * dt; if(circleCollide(player, o)){ endGame(); return; } else if(o.y - o.size &gt; H) obstacles.splice(i,1); }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// update powerups</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(let i = powerups.length - 1; i &gt;= 0; i--){ const p = powerups[i]; p.y += p.vy * dt; if(circleCollide(player, p)){ powerups.splice(i,1); player.boost = 1.8; player.boostTimer = 5 + Math.random()*3; score += 5; updateHUD(); playBeep('power'); } else if(p.y - p.size &gt; H) powerups.splice(i,1); }</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// HUD</p>
+<p class="p1"><span class="Apple-converted-space">  </span>updateHUD(); }</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Draw ----------</p>
+<p class="p1">function draw(now){ drawBackground(now || performance.now());</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// tokens</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(const t of tokens) drawToken(t);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// obstacles</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(const o of obstacles) drawObstacle(o);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// powerups</p>
+<p class="p1"><span class="Apple-converted-space">  </span>for(const p of powerups) drawPowerup(p);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// player</p>
+<p class="p1"><span class="Apple-converted-space">  </span>drawRocket(player.x, player.y, player.size, Math.sin(Date.now() / 180) * 0.06);</p>
+<p class="p1">}</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Main loop ----------</p>
+<p class="p1">function loop(time){ const dt = Math.min(0.05, (time - lastTime) / 1000); lastTime = time; update(dt); draw(time); requestAnimationFrame(loop); }</p>
+<p class="p1">requestAnimationFrame(loop);</p>
+<p class="p2"><br></p>
+<p class="p1">// ---------- Initial UI &amp; helpers ----------</p>
+<p class="p1">const toastEl = document.getElementById('toast'); function showToast(msg, ms = 6000){ toastEl.innerText = msg; toastEl.style.display = 'block'; clearTimeout(toastEl._t); toastEl._t = setTimeout(()=&gt;{ toastEl.style.display = 'none'; }, ms); }</p>
+<p class="p1">showToast('Press SPACE or click to start — Use Arrow keys / WASD to move. Avoid PR disasters and scandals. Collect EVP tokens and grab High Market Cap for a boost!', 7000);</p>
+<p class="p2"><br></p>
+<p class="p1">// seed a few items for visual niceness</p>
+<p class="p1">function seedInitial(){ for(let i=0;i&lt;5;i++) spawnToken(); for(let i=0;i&lt;2;i++) spawnObstacle(); }</p>
+<p class="p1">seedInitial();</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;/script&gt;</p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>
